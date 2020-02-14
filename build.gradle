@@ -15,6 +15,7 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:2.1.1'
 
@@ -23,9 +24,8 @@ dependencies {
 
     compile group: 'commons-codec', name: 'commons-codec', version: '1.12'
     compile group: 'commons-fileupload', name: 'commons-fileupload', version: '1.4'
-
     // 打包项目时排除tomcat时使用
-    providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+//    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
     //开启项目热部署
     implementation 'org.springframework.boot:spring-boot-devtools'
