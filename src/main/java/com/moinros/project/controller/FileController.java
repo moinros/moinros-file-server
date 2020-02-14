@@ -8,6 +8,8 @@ import com.moinros.project.result.vo.WebResult;
 import com.moinros.project.service.FileService;
 import com.moinros.project.tool.*;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +31,8 @@ import java.util.*;
 @RestController
 @RequestMapping("/server/file")
 public class FileController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(FileController.class);
 
     @Autowired
     private FileService service;
@@ -100,12 +104,14 @@ public class FileController {
 
     /**
      * 保存文件
-     * @param request HttpServletRequest
+     *
+     * @param request  HttpServletRequest
      * @param fastCode 快速检索码,没有传null
-     * @param path 文件路径,不指定则根据文件后缀分类存放
+     * @param path     文件路径,不指定则根据文件后缀分类存放
      * @return 响应结果集
      */
     public Reply saveFile(HttpServletRequest request, String fastCode, String path) {
+        LOG.info("上传文件！");
         WebResult reply = new WebResult();
         List result = new ArrayList();
         reply.setResult(result);
@@ -153,11 +159,11 @@ public class FileController {
             reply.setState(SUCCESS);
             reply.setContent("文件上传成功！");
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error(e.toString());
             reply.setState(ERROR);
             reply.setContent(e);
         } catch (ServletException e) {
-            e.printStackTrace();
+            LOG.error(e.toString());
             reply.setState(ERROR);
             reply.setContent(e);
         }

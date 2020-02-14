@@ -1,5 +1,8 @@
 package com.moinros.project.tool;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 
 /**
@@ -10,6 +13,7 @@ import java.io.*;
  * @Verison 1.0
  */
 public class FileUtil {
+    private static final Logger LOG = LoggerFactory.getLogger(FileUtil.class);
 
     /**
      * 读取 InputStream 流中的二进制数据并存到byte[]数组中
@@ -48,10 +52,10 @@ public class FileUtil {
             // 获取文件的父路径字符串
             File path = file.getParentFile();
             if (!path.exists()) {
-                System.out.println("文件夹不存在，创建 - path=" + path);
+                LOG.debug("文件夹不存在！ 创建 - path=" + path);
                 boolean isCreated = path.mkdirs();
                 if (!isCreated) {
-                    System.out.println("创建文件夹失败，创建。path=" + path);
+                    LOG.error("创建文件夹失败！ 创建 - path=" + path);
                 }
             }
             fos = new FileOutputStream(file);
@@ -66,16 +70,17 @@ public class FileUtil {
             output.flush();
             flag = true;
         } catch (Exception e) {
-            System.out.println("输出文件流时抛异常，filePath=" + filePath);
-            e.printStackTrace();
+            LOG.error("输出文件流时抛异常！ filePath=" + filePath);
+            LOG.error(e.toString());
         } finally {
             try {
                 bis.close();
                 fos.close();
                 output.close();
             } catch (IOException e0) {
-                System.out.println("文件处理失败，filePath=，filePath=" + filePath);
-                e0.printStackTrace();
+                // e0.printStackTrace();
+                LOG.error("文件处理失败！ filePath=" + filePath);
+                LOG.error(e0.toString());
             }
         }
         return flag;
