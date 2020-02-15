@@ -1,8 +1,10 @@
 package com.moinros.project.controller;
 
+import com.moinros.project.common.ParamIsNull;
 import com.moinros.project.model.pojo.FileData;
 import com.moinros.project.result.Reply;
 import com.moinros.project.result.enums.Status;
+import com.moinros.project.result.vo.WebFileInfo;
 import com.moinros.project.result.vo.WebReply;
 import com.moinros.project.result.vo.WebResult;
 import com.moinros.project.service.FileService;
@@ -11,15 +13,15 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.Part;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 注释:
@@ -45,38 +47,96 @@ public class FileController {
     /**
      * RESOURCES_PATH : 文件资源路径
      */
-    public static String RESOURCES_PATH = "/file-server/files/";
+    public static String RESOURCES_PATH;
 
     static {
+        // 根据OS,使用不同路径
         if (SystemUtil.isWindows()) {
             SERVER_PATH = "http://127.0.0.1/";
             RESOURCES_PATH = "D:/Java/project/server/files/";
         } else {
-            SERVER_PATH = "https://www.server-file.com/";
-            RESOURCES_PATH = "/file-server/files/";
+            SERVER_PATH = "https://www.server-file.com/backups/files/";
+            RESOURCES_PATH = "/usr/local/server/tomcat/webapps/backups/files/";
         }
     }
 
     private Status SUCCESS = Status.success;
     private Status ERROR = Status.error;
 
-    @PostMapping(value = "/upload")
-    public Reply uploadTest(HttpServletRequest request) throws IOException, ServletException {
+    /**
+     * 查询'USER_FACE_IMAGE'用户头像数据
+     *
+     * @return Reply 结果集
+     */
+    @GetMapping("/find/list/face")
+    public Reply findFaceImage() {
         Reply reply = new WebReply();
-        reply.setState(Status.success);
-        Collection<Part> parts = request.getParts();
-        Iterator<Part> iterator = parts.iterator();
-        while (iterator.hasNext()) {
-            Part part = iterator.next();
-            System.out.println("-----类型名称------->" + part.getName());
-            System.out.println("-----类型------->" + part.getContentType());
-            System.out.println("-----提交的类型名称------->" + part.getSubmittedFileName());
-            System.out.println("---- -------->" + part.getInputStream());
-            byte[] arr = FileUtil.readInputStream(part.getInputStream());
-            System.out.println(Arrays.toString(arr));
-            FileUtil.byteToFile(arr, RESOURCES_PATH + part.getSubmittedFileName());
+        try {
+            List li = service.findFileByFastCode("USER_FACE_IMAGE");
+            reply.setState(SUCCESS);
+            reply.setContent(sort(li));
+        } catch (Exception e) {
+            reply.setState(ERROR);
+            reply.setContent("查询失败！");
+            LOG.error(e.toString());
         }
-        reply.setContent(null);
+        return reply;
+    }
+
+    /**
+     * 查询数据集合,可指定条件
+     *
+     * @param type     文件类型
+     * @param postfix  文件后缀
+     * @param fastCode 快速检索码
+     * @return Reply 结果集
+     */
+    @GetMapping("/find/list")
+    @ParamIsNull(paramName = {"type", "postfix", "fastCode"})
+    public Reply findFileList(String type, String postfix, String fastCode) {
+        Reply reply = new WebReply();
+        try {
+            FileData data = new FileData();
+            if (type != null) {
+                data.setFileType(type);
+            }
+            if (postfix != null) {
+                data.setPostfix(postfix);
+            }
+            if (fastCode != null) {
+                data.setFastCode(fastCode);
+            }
+            List li = service.findFileList(data);
+            reply.setState(SUCCESS);
+            reply.setContent(sort(li));
+        } catch (Exception e) {
+            reply.setState(ERROR);
+            reply.setContent("查询失败！");
+            LOG.error(e.toString());
+        }
+        return reply;
+    }
+
+    /**
+     * 分页查询文件数据
+     *
+     * @param page 页码
+     * @param size 每页显示条数
+     * @return Reply 结果集
+     */
+    @GetMapping("/find/list/page")
+    public Reply findPageList(@RequestParam(value = "page", defaultValue = "1") Integer page,
+                              @RequestParam(value = "size", defaultValue = "10") Integer size) {
+        Reply reply = new WebReply();
+        try {
+            PageBean bean = service.findFileByPage(page, size);
+            reply.setState(SUCCESS);
+            reply.setContent(sort(bean));
+        } catch (Exception e) {
+            reply.setState(ERROR);
+            reply.setContent("查询失败！");
+            LOG.error(e.toString());
+        }
         return reply;
     }
 
@@ -86,9 +146,9 @@ public class FileController {
      * @param request HttpServletRequest
      * @return Reply 响应结果集
      */
-    @PostMapping(value = "/upload/binary/user")
+    @PostMapping(value = "/upload/binary/face")
     public Reply uploadUserImage(HttpServletRequest request) {
-        return saveFile(request, "[USER_IMAGE]", "user");
+        return saveFile(request, "USER_FACE_IMAGE", "face");
     }
 
     /**
@@ -111,10 +171,11 @@ public class FileController {
      * @return 响应结果集
      */
     public Reply saveFile(HttpServletRequest request, String fastCode, String path) {
-        LOG.info("上传文件！");
+        LOG.info("==================== 上传文件 LOG START ====================\n时间: " + DateFormatUtil.getDateTime());
         WebResult reply = new WebResult();
         List result = new ArrayList();
         reply.setResult(result);
+
         try {
             List<ParamBinary> list = WebUtil.getParameter(request);
             if (list != null) {
@@ -152,7 +213,7 @@ public class FileController {
                         FileUtil.byteToFile(list.get(i).getValue(), data.getFilePath());
                         // 将文件详细数据保存到数据库
                         service.saveFile(data);
-                        result.add(data);
+                        result.add(sort(data));
                     }
                 }
             }
@@ -167,7 +228,66 @@ public class FileController {
             reply.setState(ERROR);
             reply.setContent(e);
         }
+        LOG.info("==================== 上传文件 LOG END ====================");
         return reply;
+    }
+
+    /**
+     * 将文件数据整理到 WebFileInfo 中
+     *
+     * @param bean 分页数据
+     * @return Map<String, Object>
+     */
+    Map<String, Object> sort(PageBean<FileData> bean) {
+        Map<String, Object> result = new HashMap();
+        if (bean != null) {
+            List list = sort(bean.getList());
+            result.put("page", bean.getPageNo()); // 当前页码数
+            result.put("size", bean.getDataSize()); // 每页显示的记录数
+            result.put("totalCount", bean.getTotalCount()); // 总记录数
+            result.put("totalPage", bean.getTotalPage()); // 总页码数
+            result.put("pageNumber", bean.getPageNumber()); // 前后页码数组
+            result.put("result", list);
+            return result;
+        }
+        return null;
+    }
+
+    /**
+     * 将文件数据整理到 WebFileInfo 中
+     *
+     * @param list 多个文件数据的集合
+     * @return List<WebFileInfo>
+     */
+    List<WebFileInfo> sort(List<FileData> list) {
+        if (list != null && list.size() > 0) {
+            List<WebFileInfo> item = new ArrayList();
+            for (FileData fileData : list) {
+                item.add(sort(fileData));
+            }
+            return item;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * 将文件数据整理到 WebFileInfo 中,用于回显使用,相对 FileData 少了文件的磁盘路径等服务器相关信息
+     *
+     * @param data 文件数据
+     * @return WebFileInfo
+     */
+    WebFileInfo sort(FileData data) {
+        WebFileInfo info = new WebFileInfo();
+        info.setFid(data.getFid());
+        info.setFileType(data.getFileType());
+        info.setFastCode(data.getFastCode());
+        info.setPostfix(data.getPostfix());
+        info.setFileName(data.getFileName());
+        info.setNetworkPath(data.getNetworkPath());
+        info.setFileMd5(data.getFileMd5());
+        info.setUploadTime(data.getUploadTime());
+        return info;
     }
 
 }

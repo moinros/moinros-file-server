@@ -1,13 +1,12 @@
 package com.moinros.config;
 
-import java.io.IOException;
-
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 /**
  * 注释: 自定义字符编码过滤器
@@ -34,7 +33,7 @@ public class EncoidingFilter implements javax.servlet.Filter {
 		// 允许哪些站点可以访问 "*" 表示所有站点
 		response.setHeader("Access-Control-Allow-Origin", "*");
 		// 允许可执行的方法
-		response.setHeader("Access-Control-Allow-Method", "post");
+		response.setHeader("Access-Control-Allow-Method", "post,get");
 		// 指定检测请求的有效期，单位秒
 		response.addHeader("Access-Control-Max-Age", "180");
 		// 过滤通行证

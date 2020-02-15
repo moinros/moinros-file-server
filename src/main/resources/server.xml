@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Server port="8005" shutdown="SHUTDOWN">
+
+    <Listener className="org.apache.catalina.startup.VersionLoggerListener"/>
+    <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on"/>
+    <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener"/>
+    <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener"/>
+    <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener"/>
+    <GlobalNamingResources>
+        <Resource name="UserDatabase"
+                  auth="Container"
+                  type="org.apache.catalina.UserDatabase"
+                  description="User database that can be updated and saved"
+                  factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+                  pathname="conf/tomcat-users.xml"/>
+
+    </GlobalNamingResources>
+
+    <Service name="Catalina">
+
+        <Connector port="80"
+                   protocol="HTTP/1.1"
+                   connectionTimeout="20000"
+                   redirectPort="443"/>
+
+        <Connector port="443"
+                   protocol="HTTP/1.1"
+                   SSLEnabled="true"
+                   scheme="https"
+                   secure="true"
+                   keystoreFile="conf/keystore.pfx"
+                   keystoreType="PKCS12"
+                   keystorePass="GRKts4mh"
+                   clientAuth="false"
+                   SSLProtocol="TLSv1+TLSv1.1+TLSv1.2"
+                   ciphers="TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA256"/>
+
+
+        <Connector port="8009" protocol="AJP/1.3" redirectPort="443"/>
+
+
+        <Engine name="Catalina" defaultHost="localhost">
+
+            <Realm className="org.apache.catalina.realm.LockOutRealm">
+                <Realm className="org.apache.catalina.realm.UserDatabaseRealm" resourceName="UserDatabase"/>
+            </Realm>
+
+            <Host name="localhost" appBase="webapps" unpackWARs="true" autoDeploy="true">
+
+                <Valve className="org.apache.catalina.valves.AccessLogValve"
+                       directory="logs"
+                       prefix="localhost_access_log"
+                       suffix=".txt"
+                       pattern="%h %l %u %t &quot;%r&quot; %s %b"/>
+
+                <!-- <Context path="" docBase="moinros-file-server" reloadable="true" debug="0" crossContext="true"/> -->
+                <Context path="" docBase="/usr/local/tomcat/apache-tomcat-9.0.30/webapps/moinros-file-server" debug="0"/>
+
+            </Host>
+        </Engine>
+    </Service>
+
+</Server>

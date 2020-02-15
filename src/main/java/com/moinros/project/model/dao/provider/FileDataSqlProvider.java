@@ -14,7 +14,7 @@ import com.moinros.project.model.pojo.FileData;
  */
 public class FileDataSqlProvider {
 
-    private static final String SELECT_SQL =
+    public static final String SELECT_SQL =
             "`fd`.`fid` AS `fid`, "
 			+ "`fd`.`fast_code` AS `fastCode`, "
 			+ "`fd`.`file_name` AS `fileName`, "
@@ -28,11 +28,13 @@ public class FileDataSqlProvider {
 			+ "`fd`.`client_os` AS `clientOs`, "
 			+ "`fd`.`upload_time` AS `uploadTime`";
 
-    public String selectAllFileDataSQL() {
+    public String selectFileByLimit() {
         return new SQL() {
             {
                 SELECT(SELECT_SQL);
                 FROM("`file_data` AS `fd`");
+                ORDER_BY("`fd`.`upload_time` DESC");
+                LIMIT("#{start}, #{end}");
             }
         }.toString();
     }
