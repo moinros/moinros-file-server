@@ -1,5 +1,6 @@
 package com.moinros.project.controller;
 
+import com.moinros.project.common.LogInfo;
 import com.moinros.project.common.ParamIsNull;
 import com.moinros.project.model.pojo.FileData;
 import com.moinros.project.result.Reply;
@@ -17,7 +18,9 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,19 +52,145 @@ public class FileController {
      */
     public static String RESOURCES_PATH;
 
+    /**
+     * LOG_FILE_PATH : 项目日志文件路径
+     */
+    public static String LOG_FILE_PATH;
+
+    public static String SERVER_URL;
+
     static {
         // 根据OS,使用不同路径
         if (SystemUtil.isWindows()) {
-            SERVER_PATH = "http://127.0.0.1/";
+            SERVER_URL = SERVER_PATH = "http://127.0.0.1/";
             RESOURCES_PATH = "D:/Java/project/server/files/";
+            LOG_FILE_PATH = "D:/Java/project/server/logs/";
         } else {
+            SERVER_URL = "https://www.server-file.com/";
             SERVER_PATH = "https://www.server-file.com/backups/files/";
             RESOURCES_PATH = "/usr/local/server/tomcat/webapps/backups/files/";
+            LOG_FILE_PATH = "/usr/local/server/tomcat/webapps/debug/logs/";
         }
     }
 
     private Status SUCCESS = Status.success;
     private Status ERROR = Status.error;
+
+    @GetMapping("/download/log")
+    @ParamIsNull(paramName = {"name"})
+    @LogInfo("下载日志文件")
+    public Reply download(String name, HttpServletResponse response) throws UnsupportedEncodingException {
+        Reply r = new WebReply();
+        File file = new File(LOG_FILE_PATH + name);
+        if (file != null && file.exists()) {
+            download(file, r, response);
+            r.setState(SUCCESS);
+            r.setContent("下载完成！");
+        } else {
+            r.setState(ERROR);
+            r.setContent("文件不存在！");
+        }
+        return r;
+    }
+
+    /**
+     * 文件下载
+     */
+    @GetMapping("/download")
+    @ParamIsNull(paramName = {"type", "name", "md5"})
+    @LogInfo("文件下载")
+    public Reply download(
+            @RequestParam(value = "fid", defaultValue = "0") Integer fid,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam("name") String name,
+            @RequestParam("md5") String md5,
+            HttpServletRequest request, HttpServletResponse response) throws UnsupportedEncodingException {
+
+        // System.out.println("fid=" + fid + "\t type=" + type + "\t name=" + name + "\t md5=" + md5);
+        Reply reply = new WebReply();
+        if (name != null && md5 != null) {
+            // 指定文件条件
+            FileData data = new FileData();
+            data.setFileName(name);
+            data.setFileMd5(md5);
+            if (fid.intValue() > 0) data.setFid(fid);
+            if (type != null) data.setFileType(type);
+
+            FileData fileData = service.findFile(data);
+            if (fileData != null) {
+                File file = new File(fileData.getDiskPath());
+                //System.out.println(file.exists() + "  - - " + file.isFile());
+                download(file, reply, response);
+            } else {
+                reply.setState(ERROR);
+                reply.setContent("没有查询到文件数据！");
+                LOG.info("没有查询到文件数据！");
+            }
+        } else {
+            reply.setState(ERROR);
+            reply.setContent("请指定要下载的文件名！");
+            LOG.error("请指定要下载的文件名！");
+        }
+        return reply;
+    }
+
+    /**
+     * 下载文件
+     *
+     * @param file     文件对象
+     * @param response HttpServletResponse
+     */
+    private void download(File file, Reply reply, HttpServletResponse response) throws UnsupportedEncodingException {
+        // 判断文件是否存在,并且是文件
+        if (file.exists() && file.isFile()) {
+            // 设置强制下载不打开
+            response.setContentType("application/force-download");
+            // 设置文件名
+            response.addHeader("Content-Disposition", "attachment;fileName=" + URLEncoder.encode(file.getName(), "UTF-8"));
+            // 也可以明确的设置一下UTF-8
+            response.setContentType("multipart/form-data;charset=UTF-8");
+
+            // 实现文件下载
+            byte[] buffer = new byte[1024];
+            FileInputStream fis = null;
+            BufferedInputStream bis = null;
+            try {
+                fis = new FileInputStream(file);
+                bis = new BufferedInputStream(fis);
+                OutputStream os = response.getOutputStream();
+                int i = bis.read(buffer);
+                while (i != -1) {
+                    os.write(buffer, 0, i);
+                    i = bis.read(buffer);
+                }
+                LOG.info("Download the file successfully! \t PATH=" + file.getPath());
+            } catch (Exception e) {
+                e.printStackTrace();
+                LOG.error(e.toString());
+            } finally {
+                if (bis != null) {
+                    try {
+                        bis.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        LOG.error(e.toString());
+                    }
+                }
+                if (fis != null) {
+                    try {
+                        fis.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        LOG.error(e.toString());
+                    }
+                }
+            }
+        } else {
+            reply.setState(ERROR);
+            reply.setContent("选择的不是文件！");
+            LOG.error("选择的不是文件！");
+        }
+    }
 
     /**
      * 查询'USER_FACE_IMAGE'用户头像数据
@@ -110,6 +239,7 @@ public class FileController {
             reply.setState(SUCCESS);
             reply.setContent(sort(li));
         } catch (Exception e) {
+            e.printStackTrace();
             reply.setState(ERROR);
             reply.setContent("查询失败！");
             LOG.error(e.toString());
@@ -133,6 +263,7 @@ public class FileController {
             reply.setState(SUCCESS);
             reply.setContent(sort(bean));
         } catch (Exception e) {
+            e.printStackTrace();
             reply.setState(ERROR);
             reply.setContent("查询失败！");
             LOG.error(e.toString());
@@ -147,6 +278,7 @@ public class FileController {
      * @return Reply 响应结果集
      */
     @PostMapping(value = "/upload/binary/face")
+    @LogInfo("上传头像")
     public Reply uploadUserImage(HttpServletRequest request) {
         return saveFile(request, "USER_FACE_IMAGE", "face");
     }
@@ -158,6 +290,7 @@ public class FileController {
      * @return Reply 响应结果集
      */
     @PostMapping(value = "/upload/binary")
+    @LogInfo("上传文件")
     public Reply upload(HttpServletRequest request) {
         return saveFile(request, null, null);
     }
@@ -170,8 +303,7 @@ public class FileController {
      * @param path     文件路径,不指定则根据文件后缀分类存放
      * @return 响应结果集
      */
-    public Reply saveFile(HttpServletRequest request, String fastCode, String path) {
-        LOG.info("==================== 上传文件 LOG START ====================\n时间: " + DateFormatUtil.getDateTime());
+    private Reply saveFile(HttpServletRequest request, String fastCode, String path) {
         WebResult reply = new WebResult();
         List result = new ArrayList();
         reply.setResult(result);
@@ -220,15 +352,16 @@ public class FileController {
             reply.setState(SUCCESS);
             reply.setContent("文件上传成功！");
         } catch (IOException e) {
+            e.printStackTrace();
             LOG.error(e.toString());
             reply.setState(ERROR);
             reply.setContent(e);
         } catch (ServletException e) {
+            e.printStackTrace();
             LOG.error(e.toString());
             reply.setState(ERROR);
             reply.setContent(e);
         }
-        LOG.info("==================== 上传文件 LOG END ====================");
         return reply;
     }
 
@@ -238,7 +371,7 @@ public class FileController {
      * @param bean 分页数据
      * @return Map<String, Object>
      */
-    Map<String, Object> sort(PageBean<FileData> bean) {
+    private Map<String, Object> sort(PageBean<FileData> bean) {
         Map<String, Object> result = new HashMap();
         if (bean != null) {
             List list = sort(bean.getList());
@@ -259,7 +392,7 @@ public class FileController {
      * @param list 多个文件数据的集合
      * @return List<WebFileInfo>
      */
-    List<WebFileInfo> sort(List<FileData> list) {
+    private List<WebFileInfo> sort(List<FileData> list) {
         if (list != null && list.size() > 0) {
             List<WebFileInfo> item = new ArrayList();
             for (FileData fileData : list) {
@@ -277,7 +410,7 @@ public class FileController {
      * @param data 文件数据
      * @return WebFileInfo
      */
-    WebFileInfo sort(FileData data) {
+    private WebFileInfo sort(FileData data) {
         WebFileInfo info = new WebFileInfo();
         info.setFid(data.getFid());
         info.setFileType(data.getFileType());

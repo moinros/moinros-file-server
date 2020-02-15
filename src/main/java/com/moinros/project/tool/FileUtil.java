@@ -86,4 +86,19 @@ public class FileUtil {
         return flag;
     }
 
+    /**
+     * 读取指定路径下的所有文件
+     *
+     * @param path 文件路径
+     * @return File[]
+     */
+    public static File[] readFiles(String path) {
+        File file = new File(path);
+        File[] temp = file.listFiles();
+        if (temp == null || temp.length <= 0) {
+            return null;
+        }
+        return temp;
+    }
+
 }

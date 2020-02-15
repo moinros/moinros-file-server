@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>日志查询</title>
+</head>
+<body>
+<ul th:if="${download_links != null}">
+    <li th:each="link : ${download_links}"><a th:href="${link.value}" th:text="${link.key}"></a></li>
+</ul>
+
+</body>
+</html>
