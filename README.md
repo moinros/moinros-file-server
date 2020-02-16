@@ -20,7 +20,7 @@
 | GET  | /server/file/find/list | type,postfix,fastCode| 指定条件查询文件数据 |
 | GET  | /server/file/find/list/page | page,size| 分页查询文件数据 |
 | GET  | /server/file/download | fid,type,name,md5 | 根据条件查询并下载文件 |
-| GET  | /debug/find/logs | 无参 | 查询日志文件 |
+| GET  | /server/find/logs | 无参 | 查询日志文件 |
 | GET  | /server/file/download/log | name | 根据文件名,下载指定的日志文件 |
 * 参数解释
 > | NAME | NOTE |

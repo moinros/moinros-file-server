@@ -37,7 +37,7 @@ public class PageController {
      *
      * @return
      */
-    @GetMapping("/debug/find/logs")
+    @GetMapping("/server/find/logs")
     String findLogs(HttpServletRequest request, Model model) throws IOException {
         LOG.debug("查询日志文件！ IP=" + NetworkUtil.getIpAddress(request) + ";\t OS=" + request.getHeader("User-Agent"));
         File[] files = FileUtil.readFiles(FileController.LOG_FILE_PATH);
